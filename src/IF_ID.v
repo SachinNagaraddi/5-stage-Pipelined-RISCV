@@ -4,7 +4,7 @@ module IF_ID(
 
     input [31:0] pc_in,
     input [31:0] inst_in,
-    input write_en,
+    input stall,
     input flush,
 
     output reg [31:0] pc_out,
@@ -18,12 +18,12 @@ always @(posedge clk or posedge reset) begin
     end else if (flush) begin
         pc_out   <= 32'b0;
         inst_out <= 32'b0;
-    end else if (write_en) begin
-        pc_out   <= pc_in;
-        inst_out <= inst_in;
-    end else begin
+    end else if (stall) begin
         pc_out   <= pc_out;
         inst_out <= inst_out;
+    end else begin
+        pc_out   <= pc_in;
+        inst_out <= inst_in;
     end
 end
 
