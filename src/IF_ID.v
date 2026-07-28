@@ -12,16 +12,15 @@ module IF_ID(
 );
 
 always @(posedge clk or posedge reset) begin
-    if (reset) begin
+    if (reset || flush) begin
         pc_out   <= 32'b0;
         inst_out <= 32'b0;
-    end else if (flush) begin
-        pc_out   <= 32'b0;
-        inst_out <= 32'b0;
-    end else if (stall) begin
+    end 
+    else if (stall) begin
         pc_out   <= pc_out;
         inst_out <= inst_out;
-    end else begin
+    end 
+    else begin
         pc_out   <= pc_in;
         inst_out <= inst_in;
     end
