@@ -12,13 +12,13 @@ always @(*) begin
     if (MEM_RegWrite && (MEM_rd != 0) && (MEM_rd == EX_rs1))
         ForwardA = 2'b10;
 
+    else if (WB_RegWrite && (WB_rd != 0) && (WB_rd == EX_rs1))
+        ForwardA = 2'b01;
+
     if (MEM_RegWrite && (MEM_rd != 0) && (MEM_rd == EX_rs2))
         ForwardB = 2'b10;
 
-    if (WB_RegWrite && (WB_rd != 0) && !(MEM_RegWrite && (MEM_rd == EX_rs1)) && (WB_rd == EX_rs1))
-        ForwardA = 2'b01;
-
-    if (WB_RegWrite && (WB_rd != 0) && !(MEM_RegWrite && (MEM_rd == EX_rs2)) && (WB_rd == EX_rs2))
+    else if (WB_RegWrite && (WB_rd != 0) &&  (WB_rd == EX_rs2))
         ForwardB = 2'b01;
 end
 
