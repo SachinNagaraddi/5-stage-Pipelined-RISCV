@@ -1,5 +1,3 @@
-// 5-Stage Pipelined RISC-V Processor
-// Upgraded with hazard detection, forwarding, and ID-stage branch flush
 module top;
 
     reg clk;
