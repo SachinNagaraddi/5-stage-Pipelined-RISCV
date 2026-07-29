@@ -96,6 +96,21 @@ module top(input clk,reset);
         .Branch(cu_Branch)
     );
 
+    wire [31:0] id_ex_pc;
+    wire [31:0] id_ex_rd1;
+    wire [31:0] id_ex_rd2;
+    wire [31:0] id_ex_imm;
+    wire [2:0] id_ex_funct3;
+    wire [6:0] id_ex_funct7;
+    wire [4:0] id_ex_rs1;
+    wire [4:0] id_ex_rs2;
+    wire [4:0] id_ex_rd;
+    wire id_ex_RegWrite;
+    wire id_ex_MemWrite;
+    wire id_ex_MemToReg;
+    wire id_ex_ALUSrc;
+    wire [1:0] id_ex_ALUOp;
+
     ID_EX id_ex_reg (
         .clk(clk),
         .reset(reset),
@@ -132,116 +147,31 @@ module top(input clk,reset);
         .ALUOp_out(id_ex_ALUOp)
     );
 
-    // Hazard / branch handling
-    wire PCWrite;
-    wire IF_ID_Write;
-    wire control_sel;
-    wire branch_taken;
-    wire [31:0] imm;
-    wire [31:0] branch_target;
-
-    // ID/EX stage
-    wire [31:0] id_ex_pc;
-    wire [31:0] id_ex_rd1;
-    wire [31:0] id_ex_rd2;
-    wire [31:0] id_ex_imm;
-    wire [2:0] id_ex_funct3;
-    wire [6:0] id_ex_funct7;
-    wire [4:0] id_ex_rs1;
-    wire [4:0] id_ex_rs2;
-    wire [4:0] id_ex_rd;
-    wire id_ex_RegWrite;
-    wire id_ex_MemRead;
-    wire id_ex_MemWrite;
-    wire id_ex_MemToReg;
-    wire id_ex_ALUSrc;
-    wire [1:0] id_ex_ALUOp;
-
-    // Forwarding controls
+    //EX stage
     wire [1:0] ForwardA;
     wire [1:0] ForwardB;
 
-    // EX stage values
-    reg [31:0] forwardedA_data;
-    reg [31:0] forwardedB_data;
-    wire [31:0] ALU_in1;
-    wire [31:0] ALU_in2;
+    wire [31:0]A,mem_wb_data;
     wire [31:0] alu_result;
     wire zero;
     wire [3:0] ALU_ctrl;
-
-    // EX/MEM stage
-    wire [31:0] ex_mem_alu;
-    wire [31:0] ex_mem_wdata;
-    wire [4:0] ex_mem_rd;
-    wire ex_mem_MemRead;
-    wire ex_mem_MemWrite;
-    wire ex_mem_MemToReg;
-    wire ex_mem_RegWrite;
-
-    // MEM/WB stage
-    wire [31:0] mem_wb_alu;
     
-    
-    wire mem_wb_MemToReg;
-    
-    wire [31:0] mem_read_data;
-    wire [31:0] wb_data;
-
-
-
-    
-
-    
-    assign branch_target = if_id_pc + imm;
-    assign branch_taken = cu_Branch && (readData1 == readData2);
-
-    hazard_detection HDU (
-        .MemRead(id_ex_MemRead),
-        .ID_EX_rd(id_ex_rd),
-        .IF_ID_rs1(rs1),
-        .IF_ID_rs2(rs2),
-        .PCWrite(PCWrite),
-        .IF_ID_Write(IF_ID_Write),
-        .control_sel(control_sel)
+    Mux2to1 Aoperand (
+        .sel(ForwardA),
+        .s0(id_ex_rd1),
+        .s1(mem_wb_data);
+        .out(A)
     );
 
-    assign pc_next = branch_taken ? branch_target : (PCWrite ? (pc + 4) : pc);
+    assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB)? mwm_wb_data:id_ex_rd2;
 
-    
-
-    
-    
-
-    forwarding_unit FU (
-        .EX_rs1(id_ex_rs1),
-        .EX_rs2(id_ex_rs2),
-        .MEM_rd(ex_mem_rd),
-        .WB_rd(mem_wb_rd),
-        .MEM_RegWrite(ex_mem_RegWrite),
-        .WB_RegWrite(mem_wb_RegWrite),
-        .ForwardA(ForwardA),
-        .ForwardB(ForwardB)
+    ALU execute_unit (
+        .A(A),
+        .B(B),
+        .ALU_ctrl(ALU_ctrl),
+        .result(alu_result),
+        .zero(zero)
     );
-
-    always @(*) begin
-        case (ForwardA)
-            2'b10: forwardedA_data = ex_mem_alu;
-            2'b01: forwardedA_data = wb_data;
-            default: forwardedA_data = id_ex_rd1;
-        endcase
-    end
-
-    always @(*) begin
-        case (ForwardB)
-            2'b10: forwardedB_data = ex_mem_alu;
-            2'b01: forwardedB_data = wb_data;
-            default: forwardedB_data = id_ex_rd2;
-        endcase
-    end
-
-    assign ALU_in1 = forwardedA_data;
-    assign ALU_in2 = id_ex_ALUSrc ? id_ex_imm : forwardedB_data;
 
     alu_control ALU_CTRL_UNIT (
         .ALUOp(id_ex_ALUOp),
@@ -249,43 +179,45 @@ module top(input clk,reset);
         .funct7(id_ex_funct7),
         .ALU_ctrl(ALU_ctrl)
     );
-
-    ALU execute_unit (
-        .A(ALU_in1),
-        .B(ALU_in2),
-        .ALU_ctrl(ALU_ctrl),
-        .result(alu_result),
-        .zero(zero)
-    );
+    
+    wire [31:0] ex_mem_alu;
+    wire [31:0] ex_mem_wdata;
+    wire [4:0] ex_mem_rd;
+    wire ex_mem_MemWrite;
+    wire ex_mem_MemToReg;
+    wire ex_mem_RegWrite;
 
     EX_MEM ex_mem_reg (
         .clk(clk),
         .reset(reset),
         .alu_result_in(alu_result),
-        .write_data_in(forwardedB_data),
+        .write_data_in(B),
         .rd_in(id_ex_rd),
-        .MemRead_in(id_ex_MemRead),
         .MemWrite_in(id_ex_MemWrite),
         .MemToReg_in(id_ex_MemToReg),
         .RegWrite_in(id_ex_RegWrite),
         .alu_result_out(ex_mem_alu),
         .write_data_out(ex_mem_wdata),
         .rd_out(ex_mem_rd),
-        .MemRead_out(ex_mem_MemRead),
         .MemWrite_out(ex_mem_MemWrite),
         .MemToReg_out(ex_mem_MemToReg),
         .RegWrite_out(ex_mem_RegWrite)
     );
 
+    // MEM stage
+    wire [31:0] mem_read_data;
+
     DataMemory data_mem (
-        .rst(~reset),
+        .rst(reset),
         .clk(clk),
         .memWrite(ex_mem_MemWrite),
-        .memRead(ex_mem_MemRead),
         .address(ex_mem_alu),
         .writeData(ex_mem_wdata),
         .readData(mem_read_data)
     );
+
+    wire [31:0] mem_wb_alu;
+    wire mem_wb_MemToReg;
 
     MEM_WB mem_wb_reg (
         .clk(clk),
@@ -302,38 +234,42 @@ module top(input clk,reset);
         .RegWrite_out(mem_wb_RegWrite)
     );
 
-    WB writeback_unit (
-        .mem_wb_MemToReg(mem_wb_MemToReg),
-        .mem_wb_read_data(mem_wb_data),
-        .mem_wb_alu_result(mem_wb_alu),
-        .write_back_data(wb_data)
+    //WB stage
+    Mux2to1 regdata(
+        .sel(mem_wb_MemToReg),
+        .s0(mem_wb_alu),
+        .s1(mem_wb_data),
+        .out(wb_data)
     );
 
-    initial begin
-        $monitor("Cycle=%0t Final_Output=%d", $time, wb_data);
-    end
+    //Forwarding unit
+    forwarding_unit FU (
+        .EX_rs1(id_ex_rs1),
+        .EX_rs2(id_ex_rs2),
+        .MEM_rd(ex_mem_rd),
+        .WB_rd(mem_wb_rd),
+        .MEM_RegWrite(ex_mem_RegWrite),
+        .WB_RegWrite(mem_wb_RegWrite),
+        .ForwardA(ForwardA),
+        .ForwardB(ForwardB)
+    );
 
-    always @(posedge clk) begin
-        $display("x1: %h x2: %h x3: %h x4: %h x5: %h",
-            reg_file.regs[1],
-            reg_file.regs[2],
-            reg_file.regs[3],
-            reg_file.regs[4],
-            reg_file.regs[5]
-        );
-    end
+    //Hazard Unit
+    
+    
+    assign branch_target = if_id_pc + imm;
+    assign branch_taken = cu_Branch && (readData1 == readData2);
 
-    always @(posedge clk) begin
-        $display("mem[112]: %h mem[116]: %h",
-            data_mem.data_memory[112],
-            data_mem.data_memory[116]
-        );
-    end
+    hazard_detection HDU (
+        .MemRead(id_ex_MemRead),
+        .ID_EX_rd(id_ex_rd),
+        .IF_ID_rs1(rs1),
+        .IF_ID_rs2(rs2),
+        .PCWrite(PCWrite),
+        .IF_ID_Write(IF_ID_Write),
+        .control_sel(control_sel)
+    );
 
-    initial begin
-        $dumpfile("wave.vcd");
-        $dumpvars(0, top);
-        #200 $finish;
-    end
-
+    assign pc_next = branch_taken ? branch_target : (PCWrite ? (pc + 4) : pc);
+    
 endmodule
