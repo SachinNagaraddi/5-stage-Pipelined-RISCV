@@ -2,7 +2,7 @@ module top(input clk,reset);
 
     // IF stage
     wire [31:0] pc,pc_plus4,pc_target,pc_next,instruction,if_id_pc,if_id_inst;
-    wire stall,PCSrc;
+    wire stall,PCSrc,flush;
 
     pc pc_unit (
         .clk(clk),
@@ -86,19 +86,21 @@ module top(input clk,reset);
     wire cu_MemToReg;
     wire cu_MemRead;
     wire cu_ALUSrc;
+    wire cu_branch;
     wire [1:0] cu_ALUOp;
-    wire cu_Branch;
 
     control_unit CU (
         .opcode(opcode),
         .RegWrite(cu_RegWrite),
         .MemWrite(cu_MemWrite),
         .MemToReg(cu_MemToReg),
-        .MemRead(cu_MemRead);
+        .MemRead(cu_MemRead),
         .ALUSrc(cu_ALUSrc),
         .ALUOp(cu_ALUOp),
-        .Branch(cu_Branch)
+        .Branch(cu_branch)
     );
+
+    wire flushE;
 
     wire [31:0] id_ex_pc;
     wire [31:0] id_ex_rd1;
@@ -112,6 +114,7 @@ module top(input clk,reset);
     wire id_ex_RegWrite;
     wire id_ex_MemWrite;
     wire id_ex_MemRead;
+    wire id_ex_branch;
     wire id_ex_MemToReg;
     wire id_ex_ALUSrc;
     wire [1:0] id_ex_ALUOp;
@@ -119,7 +122,7 @@ module top(input clk,reset);
     ID_EX id_ex_reg (
         .clk(clk),
         .reset(reset),
-        .flush(flush),
+        .flush(flushE),
         .pc_in(if_id_pc),
         .rd1_in(readData1),
         .rd2_in(readData2),
@@ -133,6 +136,7 @@ module top(input clk,reset);
         .MemWrite_in(cu_MemWrite),
         .MemRead_in(cu_MemRead),
         .MemToReg_in(cu_MemToReg),
+        .branch(cu_branch),
         .ALUSrc_in(cu_ALUSrc),
         .ALUOp_in(cu_ALUOp),
         .pc_out(id_ex_pc),
@@ -147,6 +151,7 @@ module top(input clk,reset);
         .RegWrite_out(id_ex_RegWrite),
         .MemWrite_out(id_ex_MemWrite),
         .MemRead_out(id_ex_MemRead),
+        .branch_out(id_ex_branch),
         .MemToReg_out(id_ex_MemToReg),
         .ALUSrc_out(id_ex_ALUSrc),
         .ALUOp_out(id_ex_ALUOp)
@@ -156,7 +161,7 @@ module top(input clk,reset);
     wire [1:0] ForwardA;
     wire [1:0] ForwardB;
 
-    wire [31:0]A,b;
+    wire [31:0]A,B;
     wire [31:0] alu_result;
     wire zero;
     wire [3:0] ALU_ctrl;
@@ -191,12 +196,10 @@ module top(input clk,reset);
     wire ex_mem_MemWrite;
     wire ex_mem_MemToReg;
     wire ex_mem_RegWrite;
-    wire flushE;
 
     EX_MEM ex_mem_reg (
         .clk(clk),
         .reset(reset),
-        .flush(flushE),
         .alu_result_in(alu_result),
         .write_data_in(B),
         .rd_in(id_ex_rd),
@@ -223,9 +226,8 @@ module top(input clk,reset);
         .readData(mem_read_data)
     );
 
-    wire [31:0] mem_wb_alu;
+    wire [31:0] mem_wb_alu,mem_wb_data;
     wire mem_wb_MemToReg;
-    wire id_ex_branch;
 
     MEM_WB mem_wb_reg (
         .clk(clk),
@@ -235,7 +237,7 @@ module top(input clk,reset);
         .rd_in(ex_mem_rd),
         .MemToReg_in(ex_mem_MemToReg),
         .RegWrite_in(ex_mem_RegWrite),
-        .read_data_out(wb_data),
+        .read_data_out(mem_wb_data),
         .alu_result_out(mem_wb_alu),
         .rd_out(mem_wb_rd),
         .MemToReg_out(mem_wb_MemToReg),
@@ -246,7 +248,7 @@ module top(input clk,reset);
     Mux2to1 regdata(
         .sel(mem_wb_MemToReg),
         .s0(mem_wb_alu),
-        .s1(wb_data),
+        .s1(mem_wb_data),
         .out(wb_data)
     );
 
@@ -265,9 +267,9 @@ module top(input clk,reset);
     //Hazard Unit
     hazard_detection HDU (
         .ID_EX_rd(id_ex_rd),
-        .IF_ID_rs1(if_id_rs1),
-        .IF_ID_rs2(if_id_rs2),
-        .ID_EX_MemRead(id_ex_MemRead);
+        .ID_rs1(rs1),
+        .ID_rs2(rs2),
+        .ID_EX_MemRead(id_ex_MemRead),
         .Branch(id_ex_branch),
         .zero(zero),
         .stall(stall),
