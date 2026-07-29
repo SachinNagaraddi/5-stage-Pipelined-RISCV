@@ -1,23 +1,36 @@
-module top;
-
-    reg clk;
-    reg reset;
-
-    initial begin
-        clk = 0;
-        forever #5 clk = ~clk;
-    end
-
-    initial begin
-        reset = 1;
-        #10 reset = 0;
-    end
+module top(input clk,reset);
 
     // IF stage
-    wire [31:0] pc;
-    wire [31:0] pc_next;
-    wire [31:0] instruction;
+    wire [31:0] pc,pc_plus4,pc_target,instruction;
+    wire stall;
 
+    pc pc_unit (
+        .clk(clk),
+        .reset(reset),
+        .stall(stall),
+        .pc_next(pc_next),
+        .pc(pc)
+    );
+
+    Mux2to1 pc_select(
+        .sel(PCSrc),
+        .s0(pc_plus4),
+        .s1(pc_target),
+        .out(pc_next)
+    );
+
+    pc_adder pc4(
+        .pc(pc),
+        .step_size(32'd4),
+        .pc_next(pc_plus4)
+    );
+
+    InstructionMemory instr_mem (
+        .readAddr(pc),
+        .inst(instruction)
+    );
+
+        
     // IF/ID stage
     wire [31:0] if_id_pc;
     wire [31:0] if_id_inst;
@@ -104,17 +117,7 @@ module top;
     wire [31:0] mem_read_data;
     wire [31:0] wb_data;
 
-    pc pc_unit (
-        .clk(clk),
-        .reset(reset),
-        .pc_next(pc_next),
-        .pc(pc)
-    );
 
-    InstructionMemory instr_mem (
-        .readAddr(pc),
-        .inst(instruction)
-    );
 
     control_unit CU (
         .opcode(opcode),
