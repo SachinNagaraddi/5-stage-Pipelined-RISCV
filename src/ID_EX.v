@@ -36,7 +36,6 @@ module ID_EX (
     output reg [4:0] rd_out,
 
     output reg RegWrite_out,
-    output reg MemRead_out,
     output reg MemWrite_out,
     output reg MemToReg_out,
     output reg ALUSrc_out,
