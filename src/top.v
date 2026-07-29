@@ -272,7 +272,7 @@ module top(input clk,reset);
         .ID_rs1(rs1),
         .ID_rs2(rs2),
         .ID_EX_MemRead(id_ex_MemRead),
-        .Branch(id_ex_branch),
+        .branch(id_ex_branch),
         .zero(zero),
         .stall(stall),
         .flush(flush),
