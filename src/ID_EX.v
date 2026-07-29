@@ -1,6 +1,7 @@
 module ID_EX (
     input clk,
     input reset,
+    input flush
 
     // Data signals
     input [31:0] pc_in,
@@ -43,7 +44,7 @@ module ID_EX (
 );
 
 always @(posedge clk or posedge reset) begin
-    if (reset) begin
+    if (reset || flush) begin
         pc_out <= 0;
         rd1_out <= 0;
         rd2_out <= 0;
