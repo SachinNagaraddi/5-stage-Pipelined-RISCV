@@ -22,7 +22,7 @@ module ID_EX (
     input MemRead_in,
     input MemToReg_in,
     input ALUSrc_in,
-    input branch,
+    input branch_in,
     input [1:0] ALUOp_in,
 
     // Outputs
