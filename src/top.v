@@ -1,8 +1,8 @@
 module top(input clk,reset);
 
     // IF stage
-    wire [31:0] pc,pc_plus4,pc_target,instruction;
-    wire stall;
+    wire [31:0] pc,pc_plus4,pc_target,instruction,if_id_pc,if_id_inst;
+    wire stall,PCSrc;
 
     pc pc_unit (
         .clk(clk),
@@ -30,10 +30,18 @@ module top(input clk,reset);
         .inst(instruction)
     );
 
-        
-    // IF/ID stage
-    wire [31:0] if_id_pc;
-    wire [31:0] if_id_inst;
+    IF_ID if_id_reg (
+        .clk(clk),
+        .reset(reset),
+        .pc_in(pc),
+        .inst_in(instruction),
+        .stall(stall),
+        .flush(branch_taken),
+        .pc_out(if_id_pc),
+        .inst_out(if_id_inst)
+    );
+
+    //ID stage
     wire [6:0] opcode;
     wire [4:0] rs1;
     wire [4:0] rs2;
@@ -48,18 +56,81 @@ module top(input clk,reset);
     assign funct3 = if_id_inst[14:12];
     assign funct7 = if_id_inst[31:25];
 
-    // ID stage control outputs
+    wire mem_wb_RegWrite;
+    wire [4:0] mem_wb_rd;
+    wire [31:0] mem_wb_data;
+    wire [31:0] readData1;
+    wire [31:0] readData2;
+    
+    ImmGen imm_gen (
+        .inst(if_id_inst),
+        .imm(imm)
+    );
+
+    Register reg_file (
+        .clk(clk),
+        .rst(reset),
+        .regWrite(mem_wb_RegWrite),
+        .readReg1(rs1),
+        .readReg2(rs2),
+        .writeReg(mem_wb_rd),
+        .writeData(wb_data),
+        .readData1(readData1),
+        .readData2(readData2)
+    );
+
     wire cu_RegWrite;
-    wire cu_MemRead;
     wire cu_MemWrite;
     wire cu_MemToReg;
     wire cu_ALUSrc;
     wire [1:0] cu_ALUOp;
     wire cu_Branch;
 
-    // Register file outputs
-    wire [31:0] readData1;
-    wire [31:0] readData2;
+    control_unit CU (
+        .opcode(opcode),
+        .RegWrite(cu_RegWrite),
+        .MemWrite(cu_MemWrite),
+        .MemToReg(cu_MemToReg),
+        .ALUSrc(cu_ALUSrc),
+        .ALUOp(cu_ALUOp),
+        .Branch(cu_Branch)
+    );
+
+    ID_EX id_ex_reg (
+        .clk(clk),
+        .reset(reset),
+        .flush(flush),
+        .pc_in(if_id_pc),
+        .rd1_in(readData1),
+        .rd2_in(readData2),
+        .imm_in(imm),
+        .funct3_in(funct3),
+        .funct7_in(funct7),
+        .rs1_in(rs1),
+        .rs2_in(rs2),
+        .rd_in(rd),
+        .RegWrite_in(cu_RegWrite),
+        .MemRead_in(cu_MemRead),
+        .MemWrite_in(cu_MemWrite),
+        .MemToReg_in(cu_MemToReg),
+        .ALUSrc_in(cu_ALUSrc),
+        .ALUOp_in(cu_ALUOp),
+        .pc_out(id_ex_pc),
+        .rd1_out(id_ex_rd1),
+        .rd2_out(id_ex_rd2),
+        .imm_out(id_ex_imm),
+        .funct3_out(id_ex_funct3),
+        .funct7_out(id_ex_funct7),
+        .rs1_out(id_ex_rs1),
+        .rs2_out(id_ex_rs2),
+        .rd_out(id_ex_rd),
+        .RegWrite_out(id_ex_RegWrite),
+        .MemRead_out(id_ex_MemRead),
+        .MemWrite_out(id_ex_MemWrite),
+        .MemToReg_out(id_ex_MemToReg),
+        .ALUSrc_out(id_ex_ALUSrc),
+        .ALUOp_out(id_ex_ALUOp)
+    );
 
     // Hazard / branch handling
     wire PCWrite;
@@ -110,31 +181,18 @@ module top(input clk,reset);
 
     // MEM/WB stage
     wire [31:0] mem_wb_alu;
-    wire [31:0] mem_wb_data;
-    wire [4:0] mem_wb_rd;
+    
+    
     wire mem_wb_MemToReg;
-    wire mem_wb_RegWrite;
+    
     wire [31:0] mem_read_data;
     wire [31:0] wb_data;
 
 
 
-    control_unit CU (
-        .opcode(opcode),
-        .RegWrite(cu_RegWrite),
-        .MemRead(cu_MemRead),
-        .MemWrite(cu_MemWrite),
-        .MemToReg(cu_MemToReg),
-        .ALUSrc(cu_ALUSrc),
-        .ALUOp(cu_ALUOp),
-        .Branch(cu_Branch)
-    );
+    
 
-    ImmGen imm_gen (
-        .inst(if_id_inst),
-        .imm(imm)
-    );
-
+    
     assign branch_target = if_id_pc + imm;
     assign branch_taken = cu_Branch && (readData1 == readData2);
 
@@ -150,63 +208,10 @@ module top(input clk,reset);
 
     assign pc_next = branch_taken ? branch_target : (PCWrite ? (pc + 4) : pc);
 
-    IF_ID if_id_reg (
-        .clk(clk),
-        .reset(reset),
-        .pc_in(pc),
-        .inst_in(instruction),
-        .write_en(IF_ID_Write),
-        .flush(branch_taken),
-        .pc_out(if_id_pc),
-        .inst_out(if_id_inst)
-    );
+    
 
-    Register reg_file (
-        .clk(clk),
-        .rst(~reset),
-        .regWrite(mem_wb_RegWrite),
-        .readReg1(rs1),
-        .readReg2(rs2),
-        .writeReg(mem_wb_rd),
-        .writeData(wb_data),
-        .readData1(readData1),
-        .readData2(readData2)
-    );
-
-    ID_EX id_ex_reg (
-        .clk(clk),
-        .reset(reset),
-        .pc_in(if_id_pc),
-        .rd1_in(readData1),
-        .rd2_in(readData2),
-        .imm_in(imm),
-        .funct3_in(funct3),
-        .funct7_in(funct7),
-        .rs1_in(rs1),
-        .rs2_in(rs2),
-        .rd_in(rd),
-        .RegWrite_in(control_sel ? 1'b0 : cu_RegWrite),
-        .MemRead_in(control_sel ? 1'b0 : cu_MemRead),
-        .MemWrite_in(control_sel ? 1'b0 : cu_MemWrite),
-        .MemToReg_in(control_sel ? 1'b0 : cu_MemToReg),
-        .ALUSrc_in(control_sel ? 1'b0 : cu_ALUSrc),
-        .ALUOp_in(control_sel ? 2'b00 : cu_ALUOp),
-        .pc_out(id_ex_pc),
-        .rd1_out(id_ex_rd1),
-        .rd2_out(id_ex_rd2),
-        .imm_out(id_ex_imm),
-        .funct3_out(id_ex_funct3),
-        .funct7_out(id_ex_funct7),
-        .rs1_out(id_ex_rs1),
-        .rs2_out(id_ex_rs2),
-        .rd_out(id_ex_rd),
-        .RegWrite_out(id_ex_RegWrite),
-        .MemRead_out(id_ex_MemRead),
-        .MemWrite_out(id_ex_MemWrite),
-        .MemToReg_out(id_ex_MemToReg),
-        .ALUSrc_out(id_ex_ALUSrc),
-        .ALUOp_out(id_ex_ALUOp)
-    );
+    
+    
 
     forwarding_unit FU (
         .EX_rs1(id_ex_rs1),
