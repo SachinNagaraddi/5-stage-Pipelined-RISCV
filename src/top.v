@@ -267,7 +267,7 @@ module top(input clk,reset);
     );
 
     //Hazard Unit
-    hazard_detection HDU (
+    hazard_unit HDU (
         .ID_EX_rd(id_ex_rd),
         .ID_rs1(rs1),
         .ID_rs2(rs2),
