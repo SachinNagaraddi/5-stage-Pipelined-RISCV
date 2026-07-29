@@ -1,6 +1,7 @@
 module EX_MEM (
     input clk,
     input reset,
+    input flush,
 
     // Data signals
     input [31:0] alu_result_in,
@@ -25,7 +26,7 @@ module EX_MEM (
 );
 
 always @(posedge clk or posedge reset) begin
-    if (reset) begin
+    if (reset || flush) begin
         alu_result_out <= 0;
         write_data_out <= 0;
         rd_out <= 0;
