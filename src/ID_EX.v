@@ -1,7 +1,7 @@
 module ID_EX (
     input clk,
     input reset,
-    input flush
+    input flush,
 
     // Data signals
     input [31:0] pc_in,
