@@ -1,5 +1,5 @@
 module hazard_unit(
-  input [4:0] IF_ID_rs1,IF_ID_rs2,ID_EX_rd,
+  input [4:0] ID_rs1,ID_rs2,ID_EX_rd,
   input ID_EX_MemRead,branch,zero,
   output reg  stall,flush,flushE,PCSrc
 );  
