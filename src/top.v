@@ -179,6 +179,12 @@ module top(input clk,reset);
         .funct7(id_ex_funct7),
         .ALU_ctrl(ALU_ctrl)
     );
+
+    pc_adder branch_pc(
+        .pc(pc),
+        .step_size(id_ex_pc),
+        .pc_next(pc_target)
+    );
     
     wire [31:0] ex_mem_alu;
     wire [31:0] ex_mem_wdata;
@@ -186,10 +192,12 @@ module top(input clk,reset);
     wire ex_mem_MemWrite;
     wire ex_mem_MemToReg;
     wire ex_mem_RegWrite;
+    wire flushE;
 
     EX_MEM ex_mem_reg (
         .clk(clk),
         .reset(reset),
+        .flush(flushE),
         .alu_result_in(alu_result),
         .write_data_in(B),
         .rd_in(id_ex_rd),
@@ -255,21 +263,17 @@ module top(input clk,reset);
     );
 
     //Hazard Unit
-    
-    
-    assign branch_target = if_id_pc + imm;
-    assign branch_taken = cu_Branch && (readData1 == readData2);
-
     hazard_detection HDU (
-        .MemRead(id_ex_MemRead),
         .ID_EX_rd(id_ex_rd),
         .IF_ID_rs1(rs1),
         .IF_ID_rs2(rs2),
-        .PCWrite(PCWrite),
-        .IF_ID_Write(IF_ID_Write),
-        .control_sel(control_sel)
+        .ID_EX_Write(IF_ID_Write),
+        .Branch(id_ex_branch),
+        .zero(zero),
+        .stall(stall),
+        .flush(flush),
+        .flushE(flushE),
+        .PCSrc(PCSrc)
     );
-
-    assign pc_next = branch_taken ? branch_target : (PCWrite ? (pc + 4) : pc);
     
 endmodule
