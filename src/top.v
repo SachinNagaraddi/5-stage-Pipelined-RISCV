@@ -1,7 +1,7 @@
 module top(input clk,reset);
 
     // IF stage
-    wire [31:0] pc,pc_plus4,pc_target,instruction,if_id_pc,if_id_inst;
+    wire [31:0] pc,pc_plus4,pc_target,pc_next,instruction,if_id_pc,if_id_inst;
     wire stall,PCSrc;
 
     pc pc_unit (
@@ -36,7 +36,7 @@ module top(input clk,reset);
         .pc_in(pc),
         .inst_in(instruction),
         .stall(stall),
-        .flush(branch_taken),
+        .flush(flush),
         .pc_out(if_id_pc),
         .inst_out(if_id_inst)
     );
@@ -58,9 +58,11 @@ module top(input clk,reset);
 
     wire mem_wb_RegWrite;
     wire [4:0] mem_wb_rd;
-    wire [31:0] mem_wb_data;
     wire [31:0] readData1;
     wire [31:0] readData2;
+    wire [31:0]wb_data;
+
+    wire [31:0] imm;
     
     ImmGen imm_gen (
         .inst(if_id_inst),
@@ -82,6 +84,7 @@ module top(input clk,reset);
     wire cu_RegWrite;
     wire cu_MemWrite;
     wire cu_MemToReg;
+    wire cu_MemRead;
     wire cu_ALUSrc;
     wire [1:0] cu_ALUOp;
     wire cu_Branch;
@@ -91,6 +94,7 @@ module top(input clk,reset);
         .RegWrite(cu_RegWrite),
         .MemWrite(cu_MemWrite),
         .MemToReg(cu_MemToReg),
+        .MemRead(cu_MemRead);
         .ALUSrc(cu_ALUSrc),
         .ALUOp(cu_ALUOp),
         .Branch(cu_Branch)
@@ -107,6 +111,7 @@ module top(input clk,reset);
     wire [4:0] id_ex_rd;
     wire id_ex_RegWrite;
     wire id_ex_MemWrite;
+    wire id_ex_MemRead;
     wire id_ex_MemToReg;
     wire id_ex_ALUSrc;
     wire [1:0] id_ex_ALUOp;
@@ -125,8 +130,8 @@ module top(input clk,reset);
         .rs2_in(rs2),
         .rd_in(rd),
         .RegWrite_in(cu_RegWrite),
-        .MemRead_in(cu_MemRead),
         .MemWrite_in(cu_MemWrite),
+        .MemRead_in(cu_MemRead),
         .MemToReg_in(cu_MemToReg),
         .ALUSrc_in(cu_ALUSrc),
         .ALUOp_in(cu_ALUOp),
@@ -140,8 +145,8 @@ module top(input clk,reset);
         .rs2_out(id_ex_rs2),
         .rd_out(id_ex_rd),
         .RegWrite_out(id_ex_RegWrite),
-        .MemRead_out(id_ex_MemRead),
         .MemWrite_out(id_ex_MemWrite),
+        .MemRead_out(id_ex_MemRead),
         .MemToReg_out(id_ex_MemToReg),
         .ALUSrc_out(id_ex_ALUSrc),
         .ALUOp_out(id_ex_ALUOp)
@@ -151,19 +156,13 @@ module top(input clk,reset);
     wire [1:0] ForwardA;
     wire [1:0] ForwardB;
 
-    wire [31:0]A,mem_wb_data;
+    wire [31:0]A,b;
     wire [31:0] alu_result;
     wire zero;
     wire [3:0] ALU_ctrl;
-    
-    Mux2to1 Aoperand (
-        .sel(ForwardA),
-        .s0(id_ex_rd1),
-        .s1(mem_wb_data);
-        .out(A)
-    );
 
-    assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB)? mwm_wb_data:id_ex_rd2;
+    assign A=(ForwardA)? wb_data : id_ex_rd1;
+        assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB)? wb_data:id_ex_rd2;
 
     ALU execute_unit (
         .A(A),
@@ -181,8 +180,8 @@ module top(input clk,reset);
     );
 
     pc_adder branch_pc(
-        .pc(pc),
-        .step_size(id_ex_pc),
+        .pc(id_ex_pc),
+        .step_size(id_ex_imm),
         .pc_next(pc_target)
     );
     
@@ -226,6 +225,7 @@ module top(input clk,reset);
 
     wire [31:0] mem_wb_alu;
     wire mem_wb_MemToReg;
+    wire id_ex_branch;
 
     MEM_WB mem_wb_reg (
         .clk(clk),
@@ -235,7 +235,7 @@ module top(input clk,reset);
         .rd_in(ex_mem_rd),
         .MemToReg_in(ex_mem_MemToReg),
         .RegWrite_in(ex_mem_RegWrite),
-        .read_data_out(mem_wb_data),
+        .read_data_out(wb_data),
         .alu_result_out(mem_wb_alu),
         .rd_out(mem_wb_rd),
         .MemToReg_out(mem_wb_MemToReg),
@@ -246,7 +246,7 @@ module top(input clk,reset);
     Mux2to1 regdata(
         .sel(mem_wb_MemToReg),
         .s0(mem_wb_alu),
-        .s1(mem_wb_data),
+        .s1(wb_data),
         .out(wb_data)
     );
 
@@ -265,9 +265,9 @@ module top(input clk,reset);
     //Hazard Unit
     hazard_detection HDU (
         .ID_EX_rd(id_ex_rd),
-        .IF_ID_rs1(rs1),
-        .IF_ID_rs2(rs2),
-        .ID_EX_Write(IF_ID_Write),
+        .IF_ID_rs1(if_id_rs1),
+        .IF_ID_rs2(if_id_rs2),
+        .ID_EX_MemRead(id_ex_MemRead);
         .Branch(id_ex_branch),
         .zero(zero),
         .stall(stall),
