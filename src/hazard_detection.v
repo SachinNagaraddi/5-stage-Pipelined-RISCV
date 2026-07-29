@@ -4,7 +4,7 @@ module hazard_unit(
   output reg  stall,flush,flushE,PCSrc
 );  
     always @(*) begin
-        if (ID_EX_MemRead && (ID_EX_rd!=5'd0) && ((ID_EX_rd==IF_ID_rs1)||(ID_EX_rd==IF_ID_rs2)))
+      if (ID_EX_MemRead && (ID_EX_rd!=5'd0) && ((ID_EX_rd==ID_rs1)||(ID_EX_rd==ID_rs2)))
             stall = 1'b1;
         else
             stall = 1'b0;
