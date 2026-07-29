@@ -166,8 +166,8 @@ module top(input clk,reset);
     wire zero;
     wire [3:0] ALU_ctrl;
 
-    assign A=(ForwardA)? wb_data : id_ex_rd1;
-        assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB)? wb_data:id_ex_rd2;
+    assign A=(ForwardA==0)? id_ex_rd1:wb_data;
+    assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB==0)? id_ex_rd2:wb_data;
 
     ALU execute_unit (
         .A(A),
