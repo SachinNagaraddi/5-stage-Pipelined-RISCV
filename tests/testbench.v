@@ -1,20 +1,30 @@
-module testbench(
+module testbench;
+
+reg clk;
+reg reset;
+
+top dut(
+    .clk(clk),
+    .reset(reset)
 );
 
-    reg clk;
-    reg reset;
+initial begin
+    clk = 0;
+    forever #5 clk = ~clk;
+end
 
-    initial begin
-        clk = 0;
-        forever #5 clk = ~clk;
-    end
+initial begin
+    reset = 1;
+    #10;
+    reset = 0;
+end
 
-    initial begin
-        reset = 1;
-        #10 reset = 0;
-    end
+initial begin
+    $dumpfile("wave.vcd");
+    $dumpvars(0, testbench);
 
-    top dut (
-        .clk(clk),
-        .reset(reset)
-    );
+    #1000;
+    $finish;
+end
+
+endmodule
