@@ -19,6 +19,7 @@ module ID_EX (
     // Control signals
     input RegWrite_in,
     input MemWrite_in,
+    input MemRead_in,
     input MemToReg_in,
     input ALUSrc_in,
     input [1:0] ALUOp_in,
@@ -37,6 +38,7 @@ module ID_EX (
 
     output reg RegWrite_out,
     output reg MemWrite_out,
+    output reg MemRead_out,
     output reg MemToReg_out,
     output reg ALUSrc_out,
     output reg [1:0] ALUOp_out
@@ -56,6 +58,7 @@ always @(posedge clk or posedge reset) begin
 
         RegWrite_out <= 0;
         MemWrite_out <= 0;
+        MemRead_out <=0;
         MemToReg_out <= 0;
         ALUSrc_out <= 0;
         ALUOp_out <= 0;
@@ -72,6 +75,7 @@ always @(posedge clk or posedge reset) begin
 
         RegWrite_out <= RegWrite_in;
         MemWrite_out <= MemWrite_in;
+        MemRead_out <= MemRead_in;
         MemToReg_out <= MemToReg_in;
         ALUSrc_out <= ALUSrc_in;
         ALUOp_out <= ALUOp_in;
