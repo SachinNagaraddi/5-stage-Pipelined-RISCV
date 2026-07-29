@@ -3,6 +3,7 @@ module control_unit (
 
     output reg RegWrite,
     output reg MemWrite,
+    output reg MemRead,
     output reg MemToReg,
     output reg ALUSrc,
     output reg [1:0] ALUOp,
@@ -14,9 +15,10 @@ always @(*) begin
     RegWrite = 0;
     MemWrite = 0;
     MemToReg = 0;
-    ALUSrc   = 0;
-    ALUOp    = 2'b00;
-    Branch   = 0;
+    ALUSrc = 0;
+    ALUOp = 2'b00;
+    Branch = 0;
+    MemRead =0;
 
     case (opcode)
 
@@ -37,6 +39,7 @@ always @(*) begin
             ALUSrc   = 1;
             MemToReg = 1;
             ALUOp    = 2'b00;
+            MemRead = 1;
         end
 
         7'b0100011: begin // sw
