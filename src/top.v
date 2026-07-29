@@ -165,9 +165,11 @@ module top(input clk,reset);
     wire [31:0] alu_result;
     wire zero;
     wire [3:0] ALU_ctrl;
+    wire [31:0]write_data;
 
-    assign A=(ForwardA==0)? id_ex_rd1:wb_data;
-    assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB==0)? id_ex_rd2:wb_data;
+    assign A=(ForwardA==0)? id_ex_rd1:(ForwardA==2'b01)? wb_data:ex_mem_alu;
+    assign B=(id_ex_ALUSrc)? id_ex_imm:(ForwardB==0)? id_ex_rd2:(ForwardB==2'b01)? wb_data:ex_mem_alu;
+    assign write_data = (ForwardB == 2'b00) ? id_ex_rd2 :(ForwardB == 2'b01) ? wb_data :ex_mem_alu;
 
     ALU execute_unit (
         .A(A),
@@ -201,7 +203,7 @@ module top(input clk,reset);
         .clk(clk),
         .reset(reset),
         .alu_result_in(alu_result),
-        .write_data_in(B),
+        .write_data_in(write_data),
         .rd_in(id_ex_rd),
         .MemWrite_in(id_ex_MemWrite),
         .MemToReg_in(id_ex_MemToReg),
