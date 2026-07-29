@@ -2,7 +2,6 @@ module control_unit (
     input [6:0] opcode,
 
     output reg RegWrite,
-    output reg MemRead,
     output reg MemWrite,
     output reg MemToReg,
     output reg ALUSrc,
@@ -13,7 +12,6 @@ module control_unit (
 always @(*) begin
     // Default values
     RegWrite = 0;
-    MemRead  = 0;
     MemWrite = 0;
     MemToReg = 0;
     ALUSrc   = 0;
@@ -37,7 +35,6 @@ always @(*) begin
         7'b0000011: begin // lw
             RegWrite = 1;
             ALUSrc   = 1;
-            MemRead  = 1;
             MemToReg = 1;
             ALUOp    = 2'b00;
         end
