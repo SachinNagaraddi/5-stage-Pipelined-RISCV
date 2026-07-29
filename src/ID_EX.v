@@ -62,6 +62,7 @@ always @(posedge clk or posedge reset) begin
         MemWrite_out <= 0;
         MemRead_out <=0;
         MemToReg_out <= 0;
+        branch_out <=0;
         ALUSrc_out <= 0;
         ALUOp_out <= 0;
     end else begin
@@ -79,6 +80,7 @@ always @(posedge clk or posedge reset) begin
         MemWrite_out <= MemWrite_in;
         MemRead_out <= MemRead_in;
         MemToReg_out <= MemToReg_in;
+        branch_out <= branch_in;
         ALUSrc_out <= ALUSrc_in;
         ALUOp_out <= ALUOp_in;
     end
