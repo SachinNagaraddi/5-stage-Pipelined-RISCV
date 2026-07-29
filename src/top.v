@@ -136,7 +136,7 @@ module top(input clk,reset);
         .MemWrite_in(cu_MemWrite),
         .MemRead_in(cu_MemRead),
         .MemToReg_in(cu_MemToReg),
-        .branch(cu_branch),
+        .branch_in(cu_branch),
         .ALUSrc_in(cu_ALUSrc),
         .ALUOp_in(cu_ALUOp),
         .pc_out(id_ex_pc),
