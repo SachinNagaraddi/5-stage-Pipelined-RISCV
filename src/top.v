@@ -1,18 +1,8 @@
 module top(input clk,reset);
 
     // IF stage
-    wire [31:0] pc,pc_plus4_reg,pc_target,pc_next,instruction,if_id_pc,if_id_inst;
+    wire [31:0] pc,pc_plus4,pc_target,pc_next,instruction,if_id_pc,if_id_inst;
     wire stall,PCSrc,flush;
-    reg [31:0]pc_plus4;
-
-    always@(posedge clk or posedge reset)begin
-        if(reset)begin
-            pc_plus4<=0;
-        end
-        else begin
-            pc_plus4<=pc_plus4_reg;
-        end
-    end
 
     pc pc_unit (
         .clk(clk),
@@ -32,7 +22,7 @@ module top(input clk,reset);
     pc_adder pc4(
         .pc(pc),
         .step_size(32'd4),
-        .pc_next(pc_plus4_reg)
+        .pc_next(pc_plus4)
     );
 
     InstructionMemory instr_mem (
