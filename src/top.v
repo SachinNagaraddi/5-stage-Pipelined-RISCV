@@ -9,7 +9,7 @@ module top(input clk,reset);
             pc_plus4<=0;
         end
         else begin
-            pc_plus4<=pc_plus4_reg);
+            pc_plus4<=pc_plus4_reg;
         end
     end
 
