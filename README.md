@@ -21,6 +21,8 @@ A 32-bit **RISC-V (RV32I)** processor implemented in **Verilog HDL** featuring a
 - Synthesizable and Simulation Ready
 
 ---
+##Architecture
+<img width="1448" height="804" alt="Untitled design (1)" src="https://github.com/user-attachments/assets/2ac94082-c5e8-4950-a028-5c76ffa08bfb" />
 
 ## Supported Instructions
 
