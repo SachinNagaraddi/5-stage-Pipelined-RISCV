@@ -1,8 +1,9 @@
 module top(input clk,reset);
 
     // IF stage
-    wire [31:0] pc,pc_plus4,pc_plus4_reg,pc_target,pc_next,instruction,if_id_pc,if_id_inst;
+    wire [31:0] pc,pc_plus4_reg,pc_target,pc_next,instruction,if_id_pc,if_id_inst;
     wire stall,PCSrc,flush;
+    reg [31:0]pc_plus4;
 
     always@(posedge clk or posedge reset)begin
         if(reset)begin
