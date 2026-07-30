@@ -37,6 +37,7 @@ module top(input clk,reset);
 
     InstructionMemory instr_mem (
         .readAddr(pc),
+        .reset(reset),
         .inst(instruction)
     );
 
